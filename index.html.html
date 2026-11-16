@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בניית רשימה מקושרת L₃ מתוך L₁ ו-L₂</title>
+    <style>
+        /* ==========================================================================
+           Design Tokens & Base Reset (Self-Contained Modern Academic Theme)
+           ========================================================================== */
+        :root {
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-subtle: #f8fafc;
+            --bg-code: #0f172a;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+
+            /* Version A (Singly Linked List) - Indigo */
+            --ver-a-primary: #4f46e5;
+            --ver-a-hover: #4338ca;
+            --ver-a-bg: #eef2ff;
+            --ver-a-border: #c7d2fe;
+
+            /* Version B (Doubly Linked List) - Emerald */
+            --ver-b-primary: #059669;
+            --ver-b-hover: #047857;
+            --ver-b-bg: #ecfdf5;
+            --ver-b-border: #a7f3d0;
+
+            /* Inspection / Active Highlight - Amber */
+            --amber-primary: #d97706;
+            --amber-bg: #fffbeb;
+            --amber-border: #fcd34d;
+            --amber-ring: rgba(245, 158, 11, 0.35);
+
+            /* Danger / Warning */
+            --danger-primary: #dc2626;
+            --danger-bg: #fef2f2;
+            --danger-border: #fecaca;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.04);
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Hebrew", sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+        }
+
+        .ltr {
+            direction: ltr;
+            unicode-bidi: isolate;
+        }
+
+        /* ==========================================================================
+           Layout Container
+           ========================================================================== */
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 16px 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 22px;
+        }
+
+        .card-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ==========================================================================
+           Header Banner
+           ========================================================================== */
+        .hero-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 26px 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .hero-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(99, 102, 241, 0.22);
+            border: 1px solid rgba(165, 180, 252, 0.35);
+            color: #c7d2fe;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 999px;
+            margin-bottom: 8px;
+        }
+
+        .hero-title {
+            font-size: clamp(1.4rem, 3vw, 1.95rem);
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
+        }
+
+        .hero-subtitle {
+            color: #cbd5e1;
+            font-size: 0.96rem;
+            margin-top: 6px;
+            max-width: 720px;
+        }
+
+        .formula-box {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: var(--radius-md);
+            padding: 12px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            align-self: flex-start;
+            backdrop-filter: blur(4px);
+        }
+
+        .math-formula {
+            font-family: "Times New Roman", Times, Georgia, serif;
+            font-size: 1.28rem;
+            color: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sigma-block {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+            margin: 0 2px;
+        }
+
+        .sigma-limit {
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            color: #93c5fd;
+        }
+
+        .sigma-symbol {
+            font-size: 1.55rem;
+            line-height: 1.05;
+        }
+
+        /* ==========================================================================
+           Input Panel & Tabs
+           ========================================================================== */
+        .tabs-nav {
+            display: inline-flex;
+            background: var(--bg-page);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            gap: 4px;
+        }
+
+        .tab-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.92rem;
+            font-weight: 600;
+            padding: 9px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            min-height: 40px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .tab-btn.active {
+            background: var(--bg-card);
+            color: var(--ver-a-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-hint {
+            font-size: 0.78rem;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-medium);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.98rem;
+            color: var(--text-primary);
+            background: var(--bg-subtle);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+            min-height: 44px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--ver-a-primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+        }
+
+        .quick-pills {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .pill-btn {
+            border: 1px solid var(--border-medium);
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-height: 36px;
+        }
+
+        .pill-btn:hover {
+            border-color: var(--ver-a-primary);
+            color: var(--ver-a-primary);
+            background: var(--ver-a-bg);
+        }
+
+        .random-preview-box {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--bg-subtle);
+            border: 1px dashed var(--border-medium);
+            border-radius: var(--radius-sm);
+            font-size: 0.86rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* ==========================================================================
+           Alert & Warning Banners (No browser alert/confirm)
+           ========================================================================== */
+        .alert-banner {
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            display: none;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .alert-banner.visible {
+            display: flex;
+        }
+
+        .alert-error {
+            background: var(--danger-bg);
+            border: 1px solid var(--danger-border);
+            color: var(--danger-primary);
+        }
+
+        .alert-warning {
+            background: var(--amber-bg);
+            border: 1px solid var(--amber-border);
+            color: #92400e;
+        }
+
+        .warning-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        /* ==========================================================================
+           Action Buttons Bar
+           ========================================================================== */
+        .actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 11px 18px;
+            border-radius: var(--radius-md);
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+            min-height: 46px;
+            user-select: none;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-ver-a {
+            background: var(--ver-a-bg);
+            color: var(--ver-a-primary);
+            border-color: var(--ver-a-border);
+        }
+
+        .btn-ver-a:hover {
+            background: var(--ver-a-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+        }
+
+        .btn-ver-b {
+            background: var(--ver-b-bg);
+            color: var(--ver-b-primary);
+            border-color: var(--ver-b-border);
+        }
+
+        .btn-ver-b:hover {
+            background: var(--ver-b-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+        }
+
+        .btn-compare {
+            background: linear-gradient(135deg, var(--ver-a-primary) 0%, #3730a3 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+            margin-right: auto;
+        }
+
+        .btn-compare:hover {
+            filter: brightness(1.06);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.36);
+        }
+
+        .btn-secondary {
+            background: var(--bg-subtle);
+            color: var(--text-primary);
+            border-color: var(--border-medium);
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 8px 14px;
+            min-height: 38px;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        /* ==========================================================================
+           Metrics & Runtime Dashboard
+           ========================================================================== */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card.ver-a {
+            border-top: 4px solid var(--ver-a-primary);
+        }
+
+        .metric-card.ver-b {
+            border-top: 4px solid var(--ver-b-primary);
+        }
+
+        .metric-card.neutral {
+            border-top: 4px solid #334155;
+        }
+
+        .metric-card.summary {
+            border-top: 4px solid var(--amber-primary);
+        }
+
+        .metric-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .complexity-badge {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 999px;
+        }
+
+        .badge-a {
+            background: var(--ver-a-bg);
+            color: var(--ver-a-primary);
+            border: 1px solid var(--ver-a-border);
+        }
+
+        .badge-b {
+            background: var(--ver-b-bg);
+            color: var(--ver-b-primary);
+            border: 1px solid var(--ver-b-border);
+        }
+
+        .badge-neutral {
+            background: var(--bg-page);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-medium);
+        }
+
+        .metric-value {
+            font-family: var(--font-mono);
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .metric-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        /* ==========================================================================
+           Linked List Visualizer
+           ========================================================================== */
+        .visualizer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .truncation-notice {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.86rem;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .truncation-notice.visible {
+            display: block;
+        }
+
+        .lists-stage {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .list-row {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+        }
+
+        .list-row.result-row {
+            background: #fafaf9;
+            border-color: var(--border-medium);
+        }
+
+        .list-row-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .list-row-title {
+            font-size: 0.94rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .list-row-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .nodes-track {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 6px 4px 10px;
+            scrollbar-width: thin;
+        }
+
+        .null-terminator {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: #e2e8f0;
+            padding: 5px 9px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            letter-spacing: 0.03em;
+        }
+
+        .head-tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #334155;
+            background: #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .pointer-arrow {
+            font-family: var(--font-mono);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            padding: 0 2px;
+            user-select: none;
+        }
+
+        .pointer-arrow.ver-a {
+            color: var(--ver-a-primary);
+        }
+
+        .pointer-arrow.ver-b {
+            color: var(--ver-b-primary);
+        }
+
+        .ll-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 62px;
+            background: #ffffff;
+            border: 1.5px solid var(--border-medium);
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        .ll-node-index {
+            width: 100%;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 6px;
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .ll-node-val {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 800;
+            padding: 8px 10px;
+            color: var(--text-primary);
+        }
+
+        .ll-node-pair {
+            width: 100%;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 4px;
+            background: var(--amber-bg);
+            color: #b45309;
+            border-top: 1px solid var(--amber-border);
+            display: none;
+        }
+
+        /* Clickable L3 nodes */
+        .ll-node.clickable {
+            cursor: pointer;
+            border-color: #94a3b8;
+        }
+
+        .ll-node.clickable:hover {
+            transform: translateY(-2px);
+            border-color: var(--amber-primary);
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.18);
+        }
+
+        /* Highlighted states during inspection */
+        .ll-node.active-target {
+            border-color: var(--amber-primary);
+            background: var(--amber-bg);
+            box-shadow: 0 0 0 3px var(--amber-ring);
+            transform: translateY(-2px);
+        }
+
+        .ll-node.active-target .ll-node-index {
+            background: var(--amber-primary);
+            color: #ffffff;
+        }
+
+        .ll-node.active-contributor {
+            border-color: var(--amber-primary);
+            background: #fffdf5;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+        }
+
+        .ll-node.active-contributor .ll-node-index {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .ll-node.active-contributor .ll-node-pair {
+            display: block;
+        }
+
+        .ellipsis-node {
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        /* ==========================================================================
+           Formula Breakdown Inspector Card
+           ========================================================================== */
+        .inspector-panel {
+            margin-top: 16px;
+            background: var(--amber-bg);
+            border: 1.5px solid var(--amber-border);
+            border-radius: var(--radius-md);
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .inspector-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .inspector-title {
+            font-size: 0.96rem;
+            font-weight: 800;
+            color: #92400e;
+        }
+
+        .inspector-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #ffffff;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            overflow-x: auto;
+        }
+
+        .inspector-line {
+            line-height: 1.55;
+            white-space: nowrap;
+        }
+
+        .inspector-result {
+            font-weight: 800;
+            color: #b45309;
+            font-size: 1rem;
+        }
+
+        /* ==========================================================================
+           Code Viewer Section
+           ========================================================================== */
+        .code-viewer-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .code-body {
+            margin-top: 14px;
+        }
+
+        .code-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .code-pre {
+            background: var(--bg-code);
+            color: #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 16px 18px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+            border: 1px solid #1e293b;
+        }
+
+        /* Syntax highlight token colors */
+        .tok-kw { color: #93c5fd; font-weight: 600; }
+        .tok-cls { color: #fcd34d; font-weight: 600; }
+        .tok-fn { color: #6ee7b7; }
+        .tok-num { color: #fda4af; }
+        .tok-cmt { color: #94a3b8; font-style: italic; }
+
+        /* ==========================================================================
+           Responsive Breakpoints
+           ========================================================================== */
+        @media (max-width: 640px) {
+            .app-container {
+                padding: 12px 10px 36px;
+                gap: 14px;
+            }
+            .card {
+                padding: 16px 14px;
+            }
+            .hero-header {
+                padding: 20px 16px;
+            }
+            .btn-compare {
+                margin-right: 0;
+                width: 100%;
+            }
+            .actions-bar .btn {
+                flex: 1 1 100%;
+            }
+            .metric-value {
+                font-size: 1.38rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="app-container">
+        <!-- ======================================================================
+             Header Banner & Mathematical Specification
+             ====================================================================== -->
+        <header class="hero-header">
+            <div class="hero-top">
+                <div>
+                    <div class="hero-badge">מבני נתונים • רשימות מקושרות</div>
+                    <h1 class="hero-title">בניית רשימה מקושרת L₃ מתוך L₁ ו-L₂</h1>
+                    <p class="hero-subtitle">
+                        מימוש אלגוריתמי מבוסס מצביעים (ללא המרה למערכים) עבור שתי רשימות באורך <strong>n</strong> של מספרים טבעיים,
+                        תוך השוואת רשימות חד-כיווניות (ללא היפוך) מול רשימות דו-כיווניות ומדידת זמני ריצה במילי-שניות.
+                    </p>
+                </div>
+
+                <div class="formula-box ltr" aria-label="הגדרה מתמטית">
+                    <div class="math-formula">
+                        <span>c<sub>k</sub> =</span>
+                        <span class="sigma-block">
+                            <span class="sigma-limit">k</span>
+                            <span class="sigma-symbol">&sum;</span>
+                            <span class="sigma-limit">i=1</span>
+                        </span>
+                        <span>a<sub>i</sub> &middot; b<sub>k&minus;i+1</sub></span>
+                        <span style="font-size: 0.92rem; color: #94a3b8; margin-left: 8px;">(k = 1, 2, &hellip;, n)</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ======================================================================
+             Input & Execution Control Panel
+             ====================================================================== -->
+        <section class="card" aria-label="קלט והרצת האלגוריתם">
+            <div class="card-header">
+                <h2 class="card-title">1. הגדרת רשימות הקלט (L₁, L₂)</h2>
+                <div class="tabs-nav" role="tablist">
+                    <button type="button" class="tab-btn active" id="tabManualBtn" role="tab" aria-selected="true">הזנה ידנית</button>
+                    <button type="button" class="tab-btn" id="tabRandomBtn" role="tab" aria-selected="false">יצירה אקראית (Benchmark)</button>
+                </div>
+            </div>
+
+            <!-- Manual Input Panel -->
+            <div id="manualPanel">
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="inputL1">
+                            <span>רשימה <span class="mono ltr">L₁</span> (איברים <span class="mono ltr">a₁, ..., aₙ</span>)</span>
+                            <span class="form-hint">מספרים טבעיים מופרדים בפסיק או רווח</span>
+                        </label>
+                        <input type="text" id="inputL1" class="form-input ltr" value="1, 2, 3, 4" placeholder="לדוגמה: 1, 2, 3, 4">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="inputL2">
+                            <span>רשימה <span class="mono ltr">L₂</span> (איברים <span class="mono ltr">b₁, ..., bₙ</span>)</span>
+                            <span class="form-hint">אורך זהה לרשימה L₁</span>
+                        </label>
+                        <input type="text" id="inputL2" class="form-input ltr" value="2, 5, 1, 3" placeholder="לדוגמה: 2, 5, 1, 3">
+                    </div>
+                </div>
+                <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                    <span class="form-hint">דוגמאות מהירות:</span>
+                    <button type="button" class="pill-btn" data-preset-l1="1, 2, 3, 4" data-preset-l2="2, 5, 1, 3">דוגמה בסיסית (n=4)</button>
+                    <button type="button" class="pill-btn" data-preset-l1="1, 1, 1, 1, 1" data-preset-l2="1, 2, 3, 4, 5">סכומים חלקיים (n=5)</button>
+                    <button type="button" class="pill-btn" data-preset-l1="3, 7, 2, 9, 4, 6" data-preset-l2="5, 1, 8, 2, 4, 3">דוגמה מורחבת (n=6)</button>
+                </div>
+            </div>
+
+            <!-- Random Generator Panel -->
+            <div id="randomPanel" style="display: none;">
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="randomN">
+                            <span>אורך כל רשימה (<span class="mono ltr">n</span> צמתים)</span>
+                            <span class="form-hint">טווח מומלץ: 1 עד 2000</span>
+                        </label>
+                        <input type="number" id="randomN" class="form-input ltr" value="250" min="1" max="10000">
+                        <div class="quick-pills">
+                            <button type="button" class="pill-btn" data-quick-n="5">n = 5</button>
+                            <button type="button" class="pill-btn" data-quick-n="50">n = 50</button>
+                            <button type="button" class="pill-btn" data-quick-n="250">n = 250</button>
+                            <button type="button" class="pill-btn" data-quick-n="600">n = 600</button>
+                            <button type="button" class="pill-btn" data-quick-n="1000">n = 1000</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="randomMaxVal">
+                            <span>ערך מרבי לצומת</span>
+                            <span class="form-hint">מספר טבעי בין 1 ל-ערך המרבי</span>
+                        </label>
+                        <input type="number" id="randomMaxVal" class="form-input ltr" value="10" min="1" max="10000">
+                        <div style="margin-top: 4px;">
+                            <button type="button" class="btn btn-secondary" id="generateRandomBtn">הגרל רשימות חדשות והרץ</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="random-preview-box" id="randomPreviewBox">
+                    <span>טרם הוגרלו רשימות אקראיות. לחץ על "הגרל רשימות חדשות והרץ".</span>
+                </div>
+            </div>
+
+            <!-- Validation / Error Alert -->
+            <div id="errorBanner" class="alert-banner alert-error" role="alert"></div>
+
+            <!-- Large N Performance Safety Guard -->
+            <div id="largeNWarning" class="alert-banner alert-warning" role="alert">
+                <div>
+                    <strong>אזהרת ביצועים עבור n &gt; 2000:</strong>
+                    גרסה א' (רשימה חד-כיוונית) היא בסיבוכיות <span class="mono ltr">O(n³)</span> ותבצע מיליארדי פעולות, מה שעלול להאט או להקפיא את הדפדפן.
+                    <div class="warning-actions">
+                        <button type="button" class="btn btn-ver-b" id="runOnlyBGuardBtn" style="min-height: 38px; padding: 6px 14px; font-size: 0.86rem;">הרץ גרסה ב' בלבד (O(n²))</button>
+                        <button type="button" class="btn btn-secondary" id="proceedAnywayGuardBtn">המשך והרץ בכל זאת</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="actions-bar">
+                <button type="button" class="btn btn-ver-a" id="runVerABtn">
+                    <span>הרץ גרסה א' (חד-כיוונית)</span>
+                </button>
+                <button type="button" class="btn btn-ver-b" id="runVerBBtn">
+                    <span>הרץ גרסה ב' (דו-כיוונית)</span>
+                </button>
+                <button type="button" class="btn btn-compare" id="runCompareBtn">
+                    <span>הרץ והשווה שתי גרסאות</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ======================================================================
+             Results & Millisecond Runtime Dashboard
+             ====================================================================== -->
+        <section aria-label="מדדי ביצועים וזמני ריצה">
+            <div class="metrics-grid">
+                <!-- Card 1: List Size n -->
+                <div class="metric-card neutral">
+                    <div class="metric-top">
+                        <span class="metric-label">אורך הרשימות (n)</span>
+                        <span class="complexity-badge badge-neutral">n צמתים</span>
+                    </div>
+                    <div class="metric-value ltr" id="metricN">4</div>
+                    <div class="metric-sub">
+                        <span id="metricStatusText">מוכן להרצה</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Version A Runtime -->
+                <div class="metric-card ver-a">
+                    <div class="metric-top">
+                        <span class="metric-label">גרסה א' (חד-כיוונית)</span>
+                        <span class="complexity-badge badge-a ltr">O(n³)</span>
+                    </div>
+                    <div class="metric-value ltr" id="metricTimeA">— ms</div>
+                    <div class="metric-sub">
+                        <span class="ltr" id="metricMicroA">— µs</span>
+                        <span>סריקה קדימה בלבד</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Version B Runtime -->
+                <div class="metric-card ver-b">
+                    <div class="metric-top">
+                        <span class="metric-label">גרסה ב' (דו-כיוונית)</span>
+                        <span class="complexity-badge badge-b ltr">O(n²)</span>
+                    </div>
+                    <div class="metric-value ltr" id="metricTimeB">— ms</div>
+                    <div class="metric-sub">
+                        <span class="ltr" id="metricMicroB">— µs</span>
+                        <span>מצביעי next ו-prev</span>
+                    </div>
+                </div>
+
+                <!-- Card 4: Comparison & Verification -->
+                <div class="metric-card summary">
+                    <div class="metric-top">
+                        <span class="metric-label">השוואה ואימות פלט</span>
+                        <span class="complexity-badge badge-neutral" id="verifyBadge">ממתין</span>
+                    </div>
+                    <div class="metric-value" id="metricSpeedup" style="font-size: 1.25rem;">—</div>
+                    <div class="metric-sub">
+                        <span id="metricVerifyDetail">הרץ שתי גרסאות להשוואה</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================================
+             Interactive Linked List Visualizer & Node Inspector
+             ====================================================================== -->
+        <section class="card" aria-label="הדמיה ויזואלית של הרשימות המקושרות">
+            <div class="card-header">
+                <h2 class="card-title">2. הדמיית הרשימות המקושרות ובדיקת צמתים</h2>
+                <div class="visualizer-controls">
+                    <span class="form-hint">תצוגת מצביעים:</span>
+                    <div class="tabs-nav" id="pointerModeToggle">
+                        <button type="button" class="tab-btn active" id="viewSinglyBtn">חד-כיווני (→)</button>
+                        <button type="button" class="tab-btn" id="viewDoublyBtn">דו-כיווני (⇄)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="truncationNotice" class="truncation-notice"></div>
+
+            <div class="lists-stage">
+                <!-- L1 Row -->
+                <div class="list-row">
+                    <div class="list-row-header">
+                        <div class="list-row-title">
+                            <span>רשימה <span class="mono ltr">L₁</span> (קלט ראשון)</span>
+                        </div>
+                        <span class="list-row-hint">סריקה קדימה: <span class="mono ltr">a₁ &rarr; a₂ &rarr; &hellip; &rarr; aₖ</span></span>
+                    </div>
+                    <div class="nodes-track ltr" id="trackL1"></div>
+                </div>
+
+                <!-- L2 Row -->
+                <div class="list-row">
+                    <div class="list-row-header">
+                        <div class="list-row-title">
+                            <span>רשימה <span class="mono ltr">L₂</span> (קלט שני)</span>
+                        </div>
+                        <span class="list-row-hint">סריקה הפוכה עבור <span class="mono ltr">cₖ</span>: <span class="mono ltr">bₖ &rarr; bₖ₋₁ &rarr; &hellip; &rarr; b₁</span></span>
+                    </div>
+                    <div class="nodes-track ltr" id="trackL2"></div>
+                </div>
+
+                <!-- L3 Result Row -->
+                <div class="list-row result-row">
+                    <div class="list-row-header">
+                        <div class="list-row-title">
+                            <span>רשימה <span class="mono ltr">L₃</span> (פלט מחושב)</span>
+                        </div>
+                        <span class="list-row-hint" style="color: #b45309; font-weight: 600;">לחץ על צומת <span class="mono ltr">cₖ</span> כלשהו לפירוט החישוב</span>
+                    </div>
+                    <div class="nodes-track ltr" id="trackL3"></div>
+                </div>
+            </div>
+
+            <!-- Interactive Formula Breakdown Card -->
+            <div class="inspector-panel" id="inspectorPanel">
+                <div class="inspector-header">
+                    <span class="inspector-title" id="inspectorTitle">פירוט חישוב עבור הצומת c₃</span>
+                    <span class="form-hint" style="color: #92400e;">הצמתים התורמים מודגשים למעלה בכתום</span>
+                </div>
+                <div class="inspector-steps ltr" id="inspectorSteps"></div>
+            </div>
+        </section>
+
+        <!-- ======================================================================
+             Implementation Source Code Viewer
+             ====================================================================== -->
+        <section class="card" aria-label="קוד המימוש">
+            <div class="code-viewer-header">
+                <h2 class="card-title">3. קוד המימוש (מבני נתונים מבוססי מצביעים)</h2>
+                <button type="button" class="btn btn-secondary" id="toggleCodeBtn">הסתר קוד</button>
+            </div>
+
+            <div class="code-body" id="codeBody">
+                <div class="code-toolbar">
+                    <div class="tabs-nav">
+                        <button type="button" class="tab-btn active" id="codeTabABtn">גרסה א' — רשימה חד-כיוונית (Singly)</button>
+                        <button type="button" class="tab-btn" id="codeTabBBtn">גרסה ב' — רשימה דו-כיוונית (Doubly)</button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="copyCodeBtn">העתק קוד</button>
+                </div>
+                <pre class="code-pre" id="codeDisplay"></pre>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        /* ==========================================================================
+           1. Genuine Pointer-Based Linked List Data Structures & Algorithms
+              (Strict Compliance: Zero array conversions inside buildL3Singly/Doubly)
+           ========================================================================== */
+
+        /**
+         * Node for a Singly Linked List (גרסה א')
+         */
+        class SinglyNode {
+            constructor(value) {
+                this.value = value;
+                this.next = null;
+            }
+        }
+
+        /**
+         * Singly Linked List with O(1) tail append
+         */
+        class SinglyLinkedList {
+            constructor() {
+                this.head = null;
+                this.tail = null;
+                this.length = 0;
+            }
+
+            append(value) {
+                const newNode = new SinglyNode(value);
+                if (!this.head) {
+                    this.head = newNode;
+                    this.tail = newNode;
+                } else {
+                    this.tail.next = newNode;
+                    this.tail = newNode;
+                }
+                this.length++;
+                return newNode;
+            }
+        }
+
+        /**
+         * Version A Algorithm: Build L3 directly from original Singly Linked Lists L1 and L2.
+         * - Does NOT reverse L1 or L2.
+         * - Does NOT mutate pointers of L1 or L2.
+         * - Does NOT allocate auxiliary arrays or stacks.
+         * - Uses only forward .next traversal.
+         * Time Complexity: O(n^3), Auxiliary Space: O(1)
+         */
+        function buildL3Singly(L1, L2) {
+            const L3 = new SinglyLinkedList();
+            let k = 1;
+            let outerA = L1.head;
+
+            while (outerA !== null) {
+                let sum = 0;
+                let ptrA = L1.head;
+
+                for (let i = 1; i <= k; i++) {
+                    // Locate b_{k - i + 1} starting from L2.head via (k - i) forward .next steps
+                    let ptrB = L2.head;
+                    const steps = k - i;
+                    for (let s = 0; s < steps; s++) {
+                        ptrB = ptrB.next;
+                    }
+
+                    sum += ptrA.value * ptrB.value;
+                    ptrA = ptrA.next;
+                }
+
+                L3.append(sum);
+                outerA = outerA.next;
+                k++;
+            }
+
+            return L3;
+        }
+
+        /**
+         * Node for a Doubly Linked List (גרסה ב')
+         */
+        class DoublyNode {
+            constructor(value) {
+                this.value = value;
+                this.next = null;
+                this.prev = null;
+            }
+        }
+
+        /**
+         * Doubly Linked List with O(1) tail append
+         */
+        class DoublyLinkedList {
+            constructor() {
+                this.head = null;
+                this.tail = null;
+                this.length = 0;
+            }
+
+            append(value) {
+                const newNode = new DoublyNode(value);
+                if (!this.head) {
+                    this.head = newNode;
+                    this.tail = newNode;
+                } else {
+                    newNode.prev = this.tail;
+                    this.tail.next = newNode;
+                    this.tail = newNode;
+                }
+                this.length++;
+                return newNode;
+            }
+        }
+
+        /**
+         * Version B Algorithm: Build L3 directly from Doubly Linked Lists L1 and L2.
+         * - Advances endB (b_k) forward one step per outer iteration.
+         * - Traverses ptrA forward (a_1 -> ... -> a_k) and ptrB backward (b_k -> ... -> b_1) simultaneously.
+         * Time Complexity: O(n^2), Auxiliary Space: O(1)
+         */
+        function buildL3Doubly(L1, L2) {
+            const L3 = new DoublyLinkedList();
+            let endB = L2.head; // Tracks node b_k
+            let outerA = L1.head;
+
+            while (outerA !== null && endB !== null) {
+                let sum = 0;
+                let ptrA = L1.head; // Starts at a_1, moves forward (.next)
+                let ptrB = endB;    // Starts at b_k, moves backward (.prev)
+
+                while (ptrB !== null) {
+                    sum += ptrA.value * ptrB.value;
+                    ptrA = ptrA.next;
+                    ptrB = ptrB.prev;
+                }
+
+                L3.append(sum);
+                outerA = outerA.next;
+                endB = endB.next;
+            }
+
+            return L3;
+        }
+
+        /* ==========================================================================
+           2. Helper Functions for Building Lists & Extracting Display Values
+           ========================================================================== */
+        function createSinglyFromValues(values) {
+            const list = new SinglyLinkedList();
+            for (let i = 0; i < values.length; i++) {
+                list.append(values[i]);
+            }
+            return list;
+        }
+
+        function createDoublyFromValues(values) {
+            const list = new DoublyLinkedList();
+            for (let i = 0; i < values.length; i++) {
+                list.append(values[i]);
+            }
+            return list;
+        }
+
+        function linkedListToDisplayArray(linkedList) {
+            const out = [];
+            let curr = linkedList.head;
+            while (curr !== null) {
+                out.push(curr.value);
+                curr = curr.next;
+            }
+            return out;
+        }
+
+        function areLinkedListsEqual(listA, listB) {
+            let p1 = listA.head;
+            let p2 = listB.head;
+            while (p1 !== null && p2 !== null) {
+                if (p1.value !== p2.value) return false;
+                p1 = p1.next;
+                p2 = p2.next;
+            }
+            return p1 === null && p2 === null;
+        }
+
+        /* ==========================================================================
+           3. Application State
+           ========================================================================== */
+        const state = {
+            inputMode: 'manual', // 'manual' | 'random'
+            arrA: [1, 2, 3, 4],
+            arrB: [2, 5, 1, 3],
+            arrC: [],
+            timeA: null,
+            timeB: null,
+            outputsMatch: null,
+            pointerView: 'singly', // 'singly' | 'doubly'
+            selectedK: 3, // 1-based index of inspected node c_k
+            activeCodeTab: 'A',
+            pendingLargeRunMode: null
+        };
+
+        /* ==========================================================================
+           4. DOM Elements Reference
+           ========================================================================== */
+        const els = {
+            tabManualBtn: document.getElementById('tabManualBtn'),
+            tabRandomBtn: document.getElementById('tabRandomBtn'),
+            manualPanel: document.getElementById('manualPanel'),
+            randomPanel: document.getElementById('randomPanel'),
+            inputL1: document.getElementById('inputL1'),
+            inputL2: document.getElementById('inputL2'),
+            randomN: document.getElementById('randomN'),
+            randomMaxVal: document.getElementById('randomMaxVal'),
+            generateRandomBtn: document.getElementById('generateRandomBtn'),
+            randomPreviewBox: document.getElementById('randomPreviewBox'),
+            errorBanner: document.getElementById('errorBanner'),
+            largeNWarning: document.getElementById('largeNWarning'),
+            runOnlyBGuardBtn: document.getElementById('runOnlyBGuardBtn'),
+            proceedAnywayGuardBtn: document.getElementById('proceedAnywayGuardBtn'),
+            runVerABtn: document.getElementById('runVerABtn'),
+            runVerBBtn: document.getElementById('runVerBBtn'),
+            runCompareBtn: document.getElementById('runCompareBtn'),
+
+            metricN: document.getElementById('metricN'),
+            metricStatusText: document.getElementById('metricStatusText'),
+            metricTimeA: document.getElementById('metricTimeA'),
+            metricMicroA: document.getElementById('metricMicroA'),
+            metricTimeB: document.getElementById('metricTimeB'),
+            metricMicroB: document.getElementById('metricMicroB'),
+            verifyBadge: document.getElementById('verifyBadge'),
+            metricSpeedup: document.getElementById('metricSpeedup'),
+            metricVerifyDetail: document.getElementById('metricVerifyDetail'),
+
+            viewSinglyBtn: document.getElementById('viewSinglyBtn'),
+            viewDoublyBtn: document.getElementById('viewDoublyBtn'),
+            truncationNotice: document.getElementById('truncationNotice'),
+            trackL1: document.getElementById('trackL1'),
+            trackL2: document.getElementById('trackL2'),
+            trackL3: document.getElementById('trackL3'),
+            inspectorPanel: document.getElementById('inspectorPanel'),
+            inspectorTitle: document.getElementById('inspectorTitle'),
+            inspectorSteps: document.getElementById('inspectorSteps'),
+
+            toggleCodeBtn: document.getElementById('toggleCodeBtn'),
+            codeBody: document.getElementById('codeBody'),
+            codeTabABtn: document.getElementById('codeTabABtn'),
+            codeTabBBtn: document.getElementById('codeTabBBtn'),
+            copyCodeBtn: document.getElementById('copyCodeBtn'),
+            codeDisplay: document.getElementById('codeDisplay')
+        };
+
+        /* ==========================================================================
+           5. Input Parsing & Validation
+           ========================================================================== */
+        function showError(msg) {
+            els.errorBanner.textContent = msg;
+            els.errorBanner.classList.add('visible');
+        }
+
+        function clearAlerts() {
+            els.errorBanner.classList.remove('visible');
+            els.largeNWarning.classList.remove('visible');
+        }
+
+        function parseNaturalNumberList(rawText, listName) {
+            const trimmed = rawText.trim();
+            if (!trimmed) {
+                return { error: `רשימה ${listName} ריקה. יש להזין לפחות מספר טבעי אחד.` };
+            }
+            const tokens = trimmed.split(/[\s,;]+/).filter(Boolean);
+            const values = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                if (!/^\d+$/.test(token)) {
+                    return { error: `ערך לא חוקי ברשימה ${listName}: "${token}". יש להזין מספרים טבעיים בלבד (1, 2, 3, ...).` };
+                }
+                const num = Number(token);
+                if (!Number.isSafeInteger(num) || num < 1) {
+                    return { error: `המספר "${token}" ברשימה ${listName} אינו מספר טבעי חיובי (גדול או שווה ל-1).` };
+                }
+                values.push(num);
+            }
+            return { values };
+        }
+
+        function syncManualInputs() {
+            const parsedA = parseNaturalNumberList(els.inputL1.value, 'L₁');
+            if (parsedA.error) {
+                showError(parsedA.error);
+                return false;
+            }
+            const parsedB = parseNaturalNumberList(els.inputL2.value, 'L₂');
+            if (parsedB.error) {
+                showError(parsedB.error);
+                return false;
+            }
+            if (parsedA.values.length !== parsedB.values.length) {
+                showError(`אי-התאמה באורך הרשימות: ב-L₁ יש ${parsedA.values.length} איברים, ואילו ב-L₂ יש ${parsedB.values.length} איברים. שתי הרשימות חייבות להכיל בדיוק n צמתים.`);
+                return false;
+            }
+            state.arrA = parsedA.values;
+            state.arrB = parsedB.values;
+            return true;
+        }
+
+        function generateRandomLists() {
+            clearAlerts();
+            const n = parseInt(els.randomN.value, 10);
+            const maxVal = parseInt(els.randomMaxVal.value, 10);
+
+            if (!Number.isInteger(n) || n < 1 || n > 10000) {
+                showError('אורך הרשימה n חייב להיות מספר שלם בין 1 ל-10,000.');
+                return false;
+            }
+            if (!Number.isInteger(maxVal) || maxVal < 1 || maxVal > 100000) {
+                showError('הערך המרבי לצומת חייב להיות מספר טבעי בין 1 ל-100,000.');
+                return false;
+            }
+
+            const a = new Array(n);
+            const b = new Array(n);
+            for (let i = 0; i < n; i++) {
+                a[i] = Math.floor(Math.random() * maxVal) + 1;
+                b[i] = Math.floor(Math.random() * maxVal) + 1;
+            }
+
+            state.arrA = a;
+            state.arrB = b;
+
+            const formatPreview = (arr) => {
+                if (arr.length <= 12) return arr.join(', ');
+                return `${arr.slice(0, 8).join(', ')}, ... , ${arr.slice(-3).join(', ')}`;
+            };
+
+            els.randomPreviewBox.innerHTML = `
+                <div><strong>הוגרלו ${n} צמתים לכל רשימה (ערכים בין 1 ל-${maxVal}):</strong></div>
+                <div class="ltr mono" style="font-size: 0.82rem; color: #334155;">L₁: [${formatPreview(a)}]</div>
+                <div class="ltr mono" style="font-size: 0.82rem; color: #334155;">L₂: [${formatPreview(b)}]</div>
+            `;
+            return true;
+        }
+
+        /* ==========================================================================
+           6. Execution & Precise Millisecond Timing
+           ========================================================================== */
+        function executeAlgorithm(mode, bypassGuard = false) {
+            clearAlerts();
+
+            if (state.inputMode === 'manual') {
+                if (!syncManualInputs()) return;
+            } else if (state.arrA.length === 0) {
+                if (!generateRandomLists()) return;
+            }
+
+            const n = state.arrA.length;
+
+            // Safety guard for n > 2000 when O(n^3) Version A is requested
+            if (!bypassGuard && n > 2000 && (mode === 'A' || mode === 'compare')) {
+                state.pendingLargeRunMode = mode;
+                els.largeNWarning.classList.add('visible');
+                return;
+            }
+
+            let L3Singly = null;
+            let L3Doubly = null;
+
+            if (mode === 'A' || mode === 'compare') {
+                // Build input SinglyLinkedLists outside measurement window
+                const L1 = createSinglyFromValues(state.arrA);
+                const L2 = createSinglyFromValues(state.arrB);
+
+                // Strictly measure buildL3Singly in milliseconds
+                const startA = performance.now();
+                L3Singly = buildL3Singly(L1, L2);
+                const endA = performance.now();
+                state.timeA = endA - startA;
+            } else {
+                state.timeA = null;
+            }
+
+            if (mode === 'B' || mode === 'compare') {
+                // Build input DoublyLinkedLists outside measurement window
+                const L1 = createDoublyFromValues(state.arrA);
+                const L2 = createDoublyFromValues(state.arrB);
+
+                // Strictly measure buildL3Doubly in milliseconds
+                const startB = performance.now();
+                L3Doubly = buildL3Doubly(L1, L2);
+                const endB = performance.now();
+                state.timeB = endB - startB;
+            } else {
+                state.timeB = null;
+            }
+
+            if (mode === 'compare' && L3Singly && L3Doubly) {
+                state.outputsMatch = areLinkedListsEqual(L3Singly, L3Doubly);
+            } else {
+                state.outputsMatch = null;
+            }
+
+            // Update pointer visualization mode based on run
+            if (mode === 'A') {
+                state.pointerView = 'singly';
+            } else if (mode === 'B') {
+                state.pointerView = 'doubly';
+            }
+
+            const activeResultList = L3Doubly || L3Singly;
+            state.arrC = linkedListToDisplayArray(activeResultList);
+
+            // Ensure selectedK stays within valid [1, n] range
+            if (state.selectedK < 1 || state.selectedK > n) {
+                state.selectedK = Math.min(3, n);
+            }
+
+            updateDashboardUI(mode);
+            renderVisualizer();
+        }
+
+        /* ==========================================================================
+           7. UI Dashboard Updates
+           ========================================================================== */
+        function updateDashboardUI(mode) {
+            const n = state.arrA.length;
+            els.metricN.textContent = n.toLocaleString('en-US');
+            els.metricStatusText.textContent = mode === 'compare'
+                ? 'הורצו שתי הגרסאות'
+                : (mode === 'A' ? 'הורצה גרסה א׳ בלבד' : 'הורצה גרסה ב׳ בלבד');
+
+            if (state.timeA !== null) {
+                els.metricTimeA.textContent = `${state.timeA.toFixed(4)} ms`;
+                els.metricMicroA.textContent = `${(state.timeA * 1000).toFixed(1)} µs`;
+            } else {
+                els.metricTimeA.textContent = '— ms';
+                els.metricMicroA.textContent = 'לא הורצה';
+            }
+
+            if (state.timeB !== null) {
+                els.metricTimeB.textContent = `${state.timeB.toFixed(4)} ms`;
+                els.metricMicroB.textContent = `${(state.timeB * 1000).toFixed(1)} µs`;
+            } else {
+                els.metricTimeB.textContent = '— ms';
+                els.metricMicroB.textContent = 'לא הורצה';
+            }
+
+            if (mode === 'compare' && state.timeA !== null && state.timeB !== null) {
+                if (state.outputsMatch) {
+                    els.verifyBadge.textContent = '✓ פלטים זהים';
+                    els.verifyBadge.style.background = '#ecfdf5';
+                    els.verifyBadge.style.color = '#059669';
+                    els.verifyBadge.style.borderColor = '#a7f3d0';
+                } else {
+                    els.verifyBadge.textContent = '✗ אי-התאמה';
+                    els.verifyBadge.style.background = '#fef2f2';
+                    els.verifyBadge.style.color = '#dc2626';
+                    els.verifyBadge.style.borderColor = '#fecaca';
+                }
+
+                const safeTimeB = Math.max(state.timeB, 0.0001);
+                const ratio = state.timeA / safeTimeB;
+                if (ratio >= 1.1) {
+                    els.metricSpeedup.textContent = `גרסה ב' מהירה פי ${ratio.toFixed(1)}`;
+                } else {
+                    els.metricSpeedup.textContent = 'ביצועים דומים (n קטן)';
+                }
+                els.metricVerifyDetail.textContent = `אומתו כל ${n} הצמתים ב-L₃`;
+            } else {
+                els.verifyBadge.textContent = 'הרצה בודדת';
+                els.verifyBadge.style.background = '#f1f5f9';
+                els.verifyBadge.style.color = '#475569';
+                els.verifyBadge.style.borderColor = '#cbd5e1';
+                els.metricSpeedup.textContent = mode === 'A' ? 'גרסה א׳ הושלמה' : 'גרסה ב׳ הושלמה';
+                els.metricVerifyDetail.textContent = 'לחץ "הרץ והשווה" להשוואת זמנים';
+            }
+
+            // Sync pointer toggle pills
+            els.viewSinglyBtn.classList.toggle('active', state.pointerView === 'singly');
+            els.viewDoublyBtn.classList.toggle('active', state.pointerView === 'doubly');
+        }
+
+        /* ==========================================================================
+           8. Interactive Linked List Visualizer & Formula Inspector
+           ========================================================================== */
+        function getVisibleIndices(n) {
+            if (n <= 30) {
+                const indices = [];
+                for (let idx = 0; idx < n; idx++) indices.push(idx);
+                return { indices, truncated: false };
+            }
+            const indices = [];
+            for (let idx = 0; idx < 15; idx++) indices.push(idx);
+            indices.push(-1); // Ellipsis marker
+            for (let idx = n - 5; idx < n; idx++) indices.push(idx);
+            return { indices, truncated: true };
+        }
+
+        function renderSingleTrack(container, values, prefix, listType) {
+            container.innerHTML = '';
+            const n = values.length;
+            const { indices } = getVisibleIndices(n);
+            const isDoubly = state.pointerView === 'doubly';
+            const arrowSymbol = isDoubly ? '⇄' : '→';
+            const arrowClass = isDoubly ? 'pointer-arrow ver-b' : 'pointer-arrow ver-a';
+            const k = state.selectedK;
+
+            // Start pointer marker
+            const headSpan = document.createElement('span');
+            headSpan.className = 'head-tag';
+            headSpan.textContent = isDoubly ? 'NULL ⇄ head' : 'head';
+            container.appendChild(headSpan);
+
+            const firstArrow = document.createElement('span');
+            firstArrow.className = arrowClass;
+            firstArrow.textContent = '→';
+            container.appendChild(firstArrow);
+
+            indices.forEach((idx, pos) => {
+                if (idx === -1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'ellipsis-node';
+                    ellipsis.dir = 'rtl';
+                    ellipsis.textContent = `... עוד ${n - 20} צמתים ...`;
+                    container.appendChild(ellipsis);
+
+                    const afterArrow = document.createElement('span');
+                    afterArrow.className = arrowClass;
+                    afterArrow.textContent = arrowSymbol;
+                    container.appendChild(afterArrow);
+                    return;
+                }
+
+                const oneBased = idx + 1;
+                const nodeEl = document.createElement('div');
+                nodeEl.className = 'll-node';
+
+                let pairLabel = '';
+
+                if (listType === 'L3') {
+                    nodeEl.classList.add('clickable');
+                    nodeEl.title = `לחץ להצגת פירוט החישוב של c_${oneBased}`;
+                    if (oneBased === k) {
+                        nodeEl.classList.add('active-target');
+                    }
+                    nodeEl.addEventListener('click', () => {
+                        state.selectedK = oneBased;
+                        renderVisualizer();
+                    });
+                } else if (listType === 'L1' && oneBased <= k) {
+                    nodeEl.classList.add('active-contributor');
+                    const partnerB = k - oneBased + 1;
+                    pairLabel = `× b${toSubscript(partnerB)}`;
+                } else if (listType === 'L2' && oneBased <= k) {
+                    nodeEl.classList.add('active-contributor');
+                    const partnerA = k - oneBased + 1;
+                    pairLabel = `× a${toSubscript(partnerA)}`;
+                }
+
+                const idxHeader = document.createElement('div');
+                idxHeader.className = 'll-node-index';
+                idxHeader.textContent = `${prefix}${toSubscript(oneBased)}`;
+
+                const valBody = document.createElement('div');
+                valBody.className = 'll-node-val';
+                valBody.textContent = values[idx];
+
+                nodeEl.appendChild(idxHeader);
+                nodeEl.appendChild(valBody);
+
+                if (pairLabel) {
+                    const pairFooter = document.createElement('div');
+                    pairFooter.className = 'll-node-pair';
+                    pairFooter.textContent = pairLabel;
+                    nodeEl.appendChild(pairFooter);
+                }
+
+                container.appendChild(nodeEl);
+
+                // Pointer arrow after node
+                if (pos < indices.length - 1) {
+                    const arrow = document.createElement('span');
+                    arrow.className = arrowClass;
+                    arrow.textContent = arrowSymbol;
+                    container.appendChild(arrow);
+                }
+            });
+
+            // End NULL terminator
+            const endArrow = document.createElement('span');
+            endArrow.className = arrowClass;
+            endArrow.textContent = arrowSymbol;
+            container.appendChild(endArrow);
+
+            const nullSpan = document.createElement('span');
+            nullSpan.className = 'null-terminator';
+            nullSpan.textContent = 'NULL';
+            container.appendChild(nullSpan);
+        }
+
+        function toSubscript(num) {
+            const subMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+            return String(num).split('').map(ch => subMap[ch] || ch).join('');
+        }
+
+        function renderFormulaInspector() {
+            const k = state.selectedK;
+            const n = state.arrA.length;
+            if (k < 1 || k > n || state.arrC.length === 0) return;
+
+            els.inspectorTitle.textContent = `פירוט חישוב עבור הצומת c${toSubscript(k)} (מתוך ${n} צמתים)`;
+
+            const symbolicTerms = [];
+            const numericTerms = [];
+            const productTerms = [];
+
+            const maxDisplayTerms = 14;
+            const truncateTerms = k > maxDisplayTerms;
+
+            for (let i = 1; i <= k; i++) {
+                if (truncateTerms && i === 11) {
+                    symbolicTerms.push('...');
+                    numericTerms.push('...');
+                    productTerms.push('...');
+                    i = k - 2; // Jump to last 3 terms
+                }
+                const j = k - i + 1;
+                const valA = state.arrA[i - 1];
+                const valB = state.arrB[j - 1];
+                symbolicTerms.push(`a${toSubscript(i)}·b${toSubscript(j)}`);
+                numericTerms.push(`(${valA} · ${valB})`);
+                productTerms.push(`${valA * valB}`);
+            }
+
+            const totalVal = state.arrC[k - 1];
+
+            els.inspectorSteps.innerHTML = `
+                <div class="inspector-line">c${toSubscript(k)} = ${symbolicTerms.join(' + ')}</div>
+                <div class="inspector-line" style="color: #475569;">&nbsp;&nbsp;&nbsp;= ${numericTerms.join(' + ')}</div>
+                <div class="inspector-line inspector-result">&nbsp;&nbsp;&nbsp;= ${productTerms.join(' + ')} = ${totalVal}</div>
+            `;
+        }
+
+        function renderVisualizer() {
+            const n = state.arrA.length;
+            if (n > 30) {
+                els.truncationNotice.classList.add('visible');
+                els.truncationNotice.textContent = `מציג את 15 הצמתים הראשונים ואת 5 הצמתים האחרונים מתוך n = ${n} צמתים לשמירה על ביצועי תצוגה חלקים.`;
+            } else {
+                els.truncationNotice.classList.remove('visible');
+            }
+
+            renderSingleTrack(els.trackL1, state.arrA, 'a', 'L1');
+            renderSingleTrack(els.trackL2, state.arrB, 'b', 'L2');
+            renderSingleTrack(els.trackL3, state.arrC, 'c', 'L3');
+            renderFormulaInspector();
+        }
+
+        /* ==========================================================================
+           9. Source Code Viewer with Lightweight Syntax Highlighting
+           ========================================================================== */
+        const CODE_SNIPPETS = {
+            A: `// גרסה א': רשימה מקושרת חד-כיוונית (ללא היפוך רשימות וללא מערכי עזר)
+class SinglyNode {
+    constructor(value) {
+        this.value = value;
+        this.next = null;
+    }
+}
+
+class SinglyLinkedList {
+    constructor() {
+        this.head = null;
+        this.tail = null;
+    }
+
+    append(value) {
+        const newNode = new SinglyNode(value);
+        if (!this.head) {
+            this.head = newNode;
+            this.tail = newNode;
+        } else {
+            this.tail.next = newNode;
+            this.tail = newNode;
+        }
+        return newNode;
+    }
+}
+
+// סיבוכיות זמן: O(n^3) | סיבוכיות מקום עזר: O(1)
+function buildL3Singly(L1, L2) {
+    const L3 = new SinglyLinkedList();
+    let k = 1;
+    let outerA = L1.head;
+
+    while (outerA !== null) {
+        let sum = 0;
+        let ptrA = L1.head;
+
+        for (let i = 1; i <= k; i++) {
+            // איתור האיבר b_{k - i + 1} באמצעות (k - i) צעדים קדימה מראש L2
+            let ptrB = L2.head;
+            const steps = k - i;
+            for (let s = 0; s < steps; s++) {
+                ptrB = ptrB.next;
+            }
+
+            sum += ptrA.value * ptrB.value;
+            ptrA = ptrA.next;
+        }
+
+        L3.append(sum);
+        outerA = outerA.next;
+        k++;
+    }
+
+    return L3;
+}`,
+            B: `// גרסה ב': רשימה מקושרת דו-כיוונית (סריקה במקביל קדימה ב-L1 ואחורה ב-L2)
+class DoublyNode {
+    constructor(value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    }
+}
+
+class DoublyLinkedList {
+    constructor() {
+        this.head = null;
+        this.tail = null;
+    }
+
+    append(value) {
+        const newNode = new DoublyNode(value);
+        if (!this.head) {
+            this.head = newNode;
+            this.tail = newNode;
+        } else {
+            newNode.prev = this.tail;
+            this.tail.next = newNode;
+            this.tail = newNode;
+        }
+        return newNode;
+    }
+}
+
+// סיבוכיות זמן: O(n^2) | סיבוכיות מקום עזר: O(1)
+function buildL3Doubly(L1, L2) {
+    const L3 = new DoublyLinkedList();
+    let endB = L2.head; // מצביע לצומת b_k
+    let outerA = L1.head;
+
+    while (outerA !== null && endB !== null) {
+        let sum = 0;
+        let ptrA = L1.head; // מתחיל ב-a_1 ומתקדם קדימה (next)
+        let ptrB = endB;    // מתחיל ב-b_k ונסוג אחורה (prev)
+
+        while (ptrB !== null) {
+            sum += ptrA.value * ptrB.value;
+            ptrA = ptrA.next;
+            ptrB = ptrB.prev;
+        }
+
+        L3.append(sum);
+        outerA = outerA.next;
+        endB = endB.next;
+    }
+
+    return L3;
+}`
+        };
+
+        function highlightJS(rawCode) {
+            const escaped = rawCode
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            return escaped
+                .replace(/(\/\/[^\n]*)/g, '<span class="tok-cmt">$1</span>')
+                .replace(/\b(class|constructor|function|return|const|let|if|else|while|for|new|null|this)\b/g, '<span class="tok-kw">$1</span>')
+                .replace(/\b(SinglyNode|SinglyLinkedList|DoublyNode|DoublyLinkedList)\b/g, '<span class="tok-cls">$1</span>')
+                .replace(/\b(buildL3Singly|buildL3Doubly|append)\b/g, '<span class="tok-fn">$1</span>')
+                .replace(/\b(\d+)\b/g, '<span class="tok-num">$1</span>');
+        }
+
+        function renderCodeViewer() {
+            const raw = CODE_SNIPPETS[state.activeCodeTab];
+            els.codeDisplay.innerHTML = highlightJS(raw);
+            els.codeTabABtn.classList.toggle('active', state.activeCodeTab === 'A');
+            els.codeTabBBtn.classList.toggle('active', state.activeCodeTab === 'B');
+        }
+
+        /* ==========================================================================
+           10. Event Listeners & Initialization
+           ========================================================================== */
+        els.tabManualBtn.addEventListener('click', () => {
+            state.inputMode = 'manual';
+            els.tabManualBtn.classList.add('active');
+            els.tabRandomBtn.classList.remove('active');
+            els.manualPanel.style.display = 'block';
+            els.randomPanel.style.display = 'none';
+            clearAlerts();
+        });
+
+        els.tabRandomBtn.addEventListener('click', () => {
+            state.inputMode = 'random';
+            els.tabRandomBtn.classList.add('active');
+            els.tabManualBtn.classList.remove('active');
+            els.randomPanel.style.display = 'block';
+            els.manualPanel.style.display = 'none';
+            clearAlerts();
+        });
+
+        // Preset buttons for manual mode
+        document.querySelectorAll('[data-preset-l1]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                els.inputL1.value = btn.getAttribute('data-preset-l1');
+                els.inputL2.value = btn.getAttribute('data-preset-l2');
+                state.selectedK = 3;
+                executeAlgorithm('compare');
+            });
+        });
+
+        // Quick n buttons for random generator
+        document.querySelectorAll('[data-quick-n]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                els.randomN.value = btn.getAttribute('data-quick-n');
+                if (generateRandomLists()) {
+                    executeAlgorithm('compare');
+                }
+            });
+        });
+
+        els.generateRandomBtn.addEventListener('click', () => {
+            if (generateRandomLists()) {
+                executeAlgorithm('compare');
+            }
+        });
+
+        // Execution buttons
+        els.runVerABtn.addEventListener('click', () => executeAlgorithm('A'));
+        els.runVerBBtn.addEventListener('click', () => executeAlgorithm('B'));
+        els.runCompareBtn.addEventListener('click', () => executeAlgorithm('compare'));
+
+        // Safety guard actions
+        els.runOnlyBGuardBtn.addEventListener('click', () => {
+            els.largeNWarning.classList.remove('visible');
+            executeAlgorithm('B', true);
+        });
+
+        els.proceedAnywayGuardBtn.addEventListener('click', () => {
+            const mode = state.pendingLargeRunMode || 'compare';
+            els.largeNWarning.classList.remove('visible');
+            executeAlgorithm(mode, true);
+        });
+
+        // Pointer view mode toggle
+        els.viewSinglyBtn.addEventListener('click', () => {
+            state.pointerView = 'singly';
+            els.viewSinglyBtn.classList.add('active');
+            els.viewDoublyBtn.classList.remove('active');
+            renderVisualizer();
+        });
+
+        els.viewDoublyBtn.addEventListener('click', () => {
+            state.pointerView = 'doubly';
+            els.viewDoublyBtn.classList.add('active');
+            els.viewSinglyBtn.classList.remove('active');
+            renderVisualizer();
+        });
+
+        // Code viewer controls
+        els.toggleCodeBtn.addEventListener('click', () => {
+            const isHidden = els.codeBody.style.display === 'none';
+            els.codeBody.style.display = isHidden ? 'block' : 'none';
+            els.toggleCodeBtn.textContent = isHidden ? 'הסתר קוד' : 'הצג קוד';
+        });
+
+        els.codeTabABtn.addEventListener('click', () => {
+            state.activeCodeTab = 'A';
+            renderCodeViewer();
+        });
+
+        els.codeTabBBtn.addEventListener('click', () => {
+            state.activeCodeTab = 'B';
+            renderCodeViewer();
+        });
+
+        els.copyCodeBtn.addEventListener('click', () => {
+            const textToCopy = CODE_SNIPPETS[state.activeCodeTab];
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const origText = els.copyCodeBtn.textContent;
+                els.copyCodeBtn.textContent = '✓ הקוד הועתק';
+                setTimeout(() => {
+                    els.copyCodeBtn.textContent = origText;
+                }, 1800);
+            } catch (err) {
+                // Fallback silently if restricted
+            }
+            document.body.removeChild(textarea);
+        });
+
+        // Initial run on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderCodeViewer();
+            executeAlgorithm('compare');
+        });
+    </script>
+</body>
+</html>
